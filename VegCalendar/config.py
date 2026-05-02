@@ -1,4 +1,3 @@
-SAVE_FILE = "calendar_data.json"
 
 STYLE = """
 QMainWindow, QWidget { background-color: #1a1a1a; color: #e0e0e0; }
@@ -13,9 +12,22 @@ QPushButton#ViewToggle { background-color: #2e7d32; font-weight: bold; }
 QLineEdit, QComboBox, QDateEdit { background-color: #252525; border: 1px solid #444; color: white; padding: 5px; }
 QSplitter::handle { background-color: #333333; width: 2px; }
 """
-
-# Данные для работы с Яндекс.Трекером. Подставь свои данные для работы с API
-YANDEX_TOKEN = "y0__wgBEPfA2vICGNyNQSCkrb2jFzD24db9B5GxtV8I2zberGlkEoqurQ4CbMbj" # Твой OAuth-токен
-YANDEX_ORG_ID = "8460363"    # ID организации
-YANDEX_CSV_PATH = "yandex_tracker_export.csv"
+# Куда мы сохраняем основные изменения в календарике
+SAVE_FILE = "calendar_data.json"
+# --- URL подключения к API ---
 YANDEX_BASE_URL = "https://api.tracker.yandex.net/v3"
+# --- Путь к CSV-файлу для учёта времени ---
+YANDEX_CSV_PATH = "yandex_tracker_export.csv"
+# --- Идентификация пользователя ---
+YANDEX_TOKEN = "y0__wgBEPfA2vICGNyNQSCkrb2jFzD24db9B5GxtV8I2zberGlkEoqurQ4CbMbj" # Твой OAuth-токен
+YANDEX_ORG_ID = "8460363" # ID твоей организации
+# Можно получить через GET /myself Твой логин или ID в системе Яндекса (используется для фильтрации ворклога)
+USER_LOGIN = "8000000000000002"
+# За сколько дней ДО текущей даты мы проверяем наличие записей?
+SYNC_WINDOW_DAYS = 30
+# Настройки конвертации времени (ISO 8601 -> Minutes)
+WORK_DAY_MINUTES = 480  # 8 часов
+WORK_WEEK_MINUTES = 2400 # 5 рабочих дней (если Tracker использует недели 'W')
+# ЧАС всегда равен 60 минутам по стандарту ISO, его менять не нужно
+# Ранее внесенные данные до этой даты не будут затронуты синхронизацией
+SYNC_START_DATE = "2026-05-01"

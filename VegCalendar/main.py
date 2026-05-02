@@ -32,7 +32,6 @@ from config import STYLE, SAVE_FILE
 from utils import MultiLineDelegate, FlowLayout
 from dialogs import TaskManagerDialog, RulesManagerDialog, WorkSettingsDialog
 from engine import DataManager
-from yandexAPI.sync_service import TrackerSyncService
 
 class VegCalendar(QMainWindow):
     def __init__(self):
@@ -50,7 +49,7 @@ class VegCalendar(QMainWindow):
         self.work_settings = self.engine.work_settings
 
         # 3. ТЕПЕРЬ МОЖНО РИСОВАТЬ (теперь self.tasks_data уже существует)
-        self.setWindowTitle("Veg Tracker 4.3")
+        self.setWindowTitle("Veg Tracker 4.4")
         self.resize(1400, 900)
         self.setStyleSheet(STYLE)
 
@@ -63,16 +62,6 @@ class VegCalendar(QMainWindow):
         # ... остальной код (таймеры, колонки) ...
 
         self.init_ui()
-
-        if hasattr(self, "saved_widths") and self.saved_widths:
-            for i, w in enumerate(self.saved_widths):
-                self.mirror_table.setColumnWidth(i, w)
-        else:
-            self.mirror_table.setColumnWidth(0, 140)
-            self.mirror_table.setColumnWidth(1, 280)
-            self.mirror_table.setColumnWidth(2, 100)
-            self.mirror_table.setColumnWidth(3, 60)  # Статус
-            self.mirror_table.setColumnWidth(4, 500) # Комментарий
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.tick)
@@ -181,7 +170,7 @@ class VegCalendar(QMainWindow):
         )
 
         header = self.mirror_table.horizontalHeader()
-        header.sectionResized.connect(lambda: self.mirror_table.resizeRowsToContents())
+        header.sectionResized.connect(lambda logicalIndex, oldSize, newSize: self.save_to_disk())
 
         saved = getattr(self.engine, 'mirror_widths', [140, 280, 100, 60, 500])
         
@@ -196,6 +185,11 @@ class VegCalendar(QMainWindow):
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)       # Статус (фиксированный)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)     # Комментарий (тянется)
 
+        header.setCascadingSectionResizes(True)
+        header.setMinimumSectionSize(40)
+        header.sectionResized.connect(lambda logicalIndex, oldSize, newSize: self.save_to_disk())
+
+        # СОХРАНЯЕМ РАЗМЕРЫ КОЛОНОК
         header.sectionResized.connect(self.save_to_disk)
 
         self.mirror_table.setMinimumWidth(0)

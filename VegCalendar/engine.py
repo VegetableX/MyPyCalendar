@@ -2,7 +2,7 @@
 import json
 import os
 from yandexAPI.sync_service import TrackerSyncService
-from config import YANDEX_TOKEN, YANDEX_ORG_ID, YANDEX_CSV_PATH
+import config
 import csv
 from datetime import date, timedelta
 
@@ -32,6 +32,9 @@ class DataManager:
                     self.history = data.get("history", {})
                     self.rules_data = data.get("rules", {})
                     self.work_settings.update(data.get("work_settings", {}))
+                    
+                    # --- НОВОЕ: Загружаем ширину колонок из JSON ---
+                    self.mirror_widths = data.get("mirror_widths", [140, 280, 100, 60, 500])
             except: pass
 
     def save_to_disk(self):
@@ -89,9 +92,9 @@ class DataManager:
 
         # --- НОВАЯ ЛОГИКА: Читаем старые статусы ---
         old_data = {}
-        if os.path.exists(YANDEX_CSV_PATH):
+        if os.path.exists(config.YANDEX_CSV_PATH):
             try:
-                with open(YANDEX_CSV_PATH, mode='r', encoding='utf-8-sig') as f:
+                with open(config.YANDEX_CSV_PATH, mode='r', encoding='utf-8-sig') as f:
                     reader = csv.DictReader(f, delimiter=';')
                     for row in reader:
                         # Ключ: ID задачи + Дата (первые 10 символов из ISO старта)
@@ -106,7 +109,7 @@ class DataManager:
         task_codes = {t["id"]: t["code"] for t in self.tasks_data}
 
         try:
-            with open(YANDEX_CSV_PATH, mode='w', newline='', encoding='utf-8-sig') as f:
+            with open(config.YANDEX_CSV_PATH, mode='w', newline='', encoding='utf-8-sig') as f:
                 writer = csv.writer(f, delimiter=';')
                 writer.writerow(['issue_id', 'start', 'duration', 'comment', 'sent'])
 
@@ -169,11 +172,12 @@ class DataManager:
         self.prepare_csv_for_yandex()
         
         # 2. Создаем сервис синхронизации, используя данные из config.py
-        sync_service = TrackerSyncService(
-            api_token=YANDEX_TOKEN,
-            org_id=YANDEX_ORG_ID,
-            csv_path=YANDEX_CSV_PATH
-        )
-        
+        self.sync_service = TrackerSyncService(
+        api_token=config.YANDEX_TOKEN, 
+        org_id=config.YANDEX_ORG_ID, 
+        csv_path=config.YANDEX_CSV_PATH,
+        sync_start_date=getattr (config, 'SYNC_START_DATE', '2026-05-01')
+    )
+            
         # 3. Запускаем процесс и возвращаем результат (dict с отчетом)[cite: 8]
-        return sync_service.sync_from_csv()
+        return self.sync_service.sync_from_csv()
