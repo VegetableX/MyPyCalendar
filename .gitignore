@@ -1,0 +1,45 @@
+# --- ИГНОРИРУЕМ ВСЁ ---
+/*
+
+# --- ИСКЛЮЧЕНИЯ (Что оставить) ---
+# Оставляем структуру папок
+!/VegCalendar/
+!/VegCalendar/**/
+
+# 1. Исходный код
+!/VegCalendar/**/*.py
+!/VegCalendar/**/__init__.py
+
+# 2. Интерфейс и ресурсы (Иконки, стили, картинки)
+!/VegCalendar/**/*.png
+!/VegCalendar/**/*.ico
+!/VegCalendar/**/*.svg
+!/VegCalendar/**/*.qss
+
+# 3. Документация внутри папок
+!/VegCalendar/**/*.md
+!/VegCalendar/**/*.txt
+
+# 4. Важные файлы в корне
+!/.gitignore
+!/main.py
+!/config.py
+!/engine.py
+!/utils.py
+!/dialogs.py
+!/README.md
+
+# --- ПРИНУДИТЕЛЬНЫЙ ИГНОР ---
+**/__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+build/
+dist/
+old/
+
+# Игнорируем временные данные и логи
+/*.json
+/*.txt
+/*.7z
+/*.csv

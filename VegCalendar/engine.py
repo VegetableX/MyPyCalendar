@@ -46,13 +46,15 @@ class DataManager:
             data_to_save = {
                 "tasks": self.tasks_data,
                 "history": self.history,
-                "work": self.work_settings,
+                "work_settings": self.work_settings,
                 "rules": self.rules_data,
                 "mirror_widths": getattr(self, 'mirror_widths', [140, 280, 100, 60, 500])
             }
             
             # Записываем в файл (SAVE_FILE берется из конфига или инициализации)
             with open(self.save_file, "w", encoding="utf-8") as f:
+                # indent=4 делает файл читаемым для человека
+                # ensure_ascii=False сохраняет кириллицу как буквы, а не коды
                 json.dump(data_to_save, f, indent=4, ensure_ascii=False)
                 
         except Exception as e:

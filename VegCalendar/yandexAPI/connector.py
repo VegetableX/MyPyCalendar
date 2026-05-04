@@ -3,6 +3,7 @@ import requests
 import config # Импортируем конфигурационный файл
 from datetime import datetime, timedelta
 import logging # Импортируем модуль логирования для отладки
+logger = logging.getLogger(__name__)
 
 class YandexTrackerAPI:
     def __init__(self, token, org_id):

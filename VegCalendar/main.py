@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import (
     QMenu,
     QInputDialog,
     QSplitter,
-    QMessageBox,
+    QGridLayout,
+    QStyle,
 
 )
 from PyQt6.QtCore import  Qt, QTimer, QDate
@@ -76,36 +77,95 @@ class VegCalendar(QMainWindow):
         central = QWidget()
         self.setCentralWidget(central)
         self.main_layout = QVBoxLayout(central)
+        self.main_layout.setContentsMargins(10, 10, 10, 10)
 
-        top_bar = QHBoxLayout()
+       # --- ВЕРХНЯЯ ПАНЕЛЬ (Сетка) ---
+        top_grid = QGridLayout()
+        top_grid.setContentsMargins(0, 0, 0, 0)
+        top_grid.setSpacing(0) # Убираем зазоры самой сетки
 
+        # 1. Задачи (Слева)
         self.tasks_container = QWidget()
-
         self.btns_lay = FlowLayout(self.tasks_container, spacing=5)
+        top_grid.addWidget(self.tasks_container, 0, 0)
 
-        top_bar.addWidget(self.tasks_container, 1)
+        # 2. Инфо-блок (Справа: Часы + Навигация в одном контейнере)
+        right_info_widget = QWidget()
+        right_info_lay = QVBoxLayout(right_info_widget)
+        right_info_lay.setContentsMargins(0, 0, 0, 0)
+        
+        # ЭТОТ ПАРАМЕТР УПРАВЛЯЕТ РАЗРЫВОМ (поставь 2-5 для плотности)
+        right_info_lay.setSpacing(2) 
+        right_info_lay.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
 
-        self.btn_view_toggle = QPushButton("📋 Таблица-Отчет")
+        # Часы
+        self.lbl_clock = QLabel()
+        self.lbl_clock.setAlignment(Qt.AlignmentFlag.AlignRight)
+        right_info_lay.addWidget(self.lbl_clock)
+
+        # Навигация (Ряд со стрелками)
+        nav_row = QHBoxLayout()
+        nav_row.setContentsMargins(0, 0, 0, 0)
+        nav_row.setSpacing(5)
+        nav_row.setAlignment(Qt.AlignmentFlag.AlignRight)
+
+        self.btn_prev = QPushButton("◀")
+        self.btn_next = QPushButton("▶")
+        self.btn_prev.setFixedSize(24, 24)
+        self.btn_next.setFixedSize(24, 24)
+        self.btn_prev.clicked.connect(self.prev_w)
+        self.btn_next.clicked.connect(self.next_w)
+
+        self.lbl_range = QLabel()
+        self.lbl_range.setFont(QFont("Arial", 10, QFont.Weight.Bold))
+
+        nav_row.addWidget(self.btn_prev)
+        nav_row.addWidget(self.lbl_range)
+        nav_row.addWidget(self.btn_next)
+
+        right_info_lay.addLayout(nav_row)
+
+        # Добавляем весь инфо-блок в одну ячейку (0, 1)
+        top_grid.addWidget(right_info_widget, 0, 1, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
+
+        # Настройки колонок
+        top_grid.setColumnStretch(0, 1)
+        top_grid.setColumnMinimumWidth(1, 220)
+
+        self.main_layout.addLayout(top_grid)
+
+        # --- СОЗДАЕМ КОЛОНКУ ДЛЯ КНОПОК (Right Toolbar) ---
+        self.right_toolbar_layout = QVBoxLayout()
+        # Используем AlignmentFlag.AlignTop для совместимости с новыми версиями Qt
+        self.right_toolbar_layout.setAlignment(Qt.AlignmentFlag.AlignTop) 
+        self.right_toolbar_layout.setSpacing(5)
+
+        # 1. Кнопка переключения вида (Таблица-отчет)
+        self.btn_view_toggle = QPushButton("📋") # Сделали иконку вместо текста
         self.btn_view_toggle.setCheckable(True)
         self.btn_view_toggle.setObjectName("ViewToggle")
+        self.btn_view_toggle.setFixedSize(40, 40)
+        self.btn_view_toggle.setToolTip("Таблица-Отчет")
         self.btn_view_toggle.clicked.connect(self.switch_view)
-        top_bar.addWidget(self.btn_view_toggle)
+        self.right_toolbar_layout.addWidget(self.btn_view_toggle)
 
+        # 2. Кнопка Ластик
         self.btn_eraser = QPushButton("🧹")
         self.btn_eraser.setCheckable(True)
         self.btn_eraser.setObjectName("EraserBtn")
         self.btn_eraser.setFixedSize(40, 40)
         self.btn_eraser.clicked.connect(self.toggle_eraser)
-        top_bar.addWidget(self.btn_eraser)
+        self.right_toolbar_layout.addWidget(self.btn_eraser)
 
-        # Кнопка синхронизации с Яндексом
-        self.btn_sync = QPushButton("☁") # Можно использовать иконку облака
+        # 3. Кнопка синхронизации
+        self.btn_sync = QPushButton("☁")
         self.btn_sync.setObjectName("IconBtn")
         self.btn_sync.setFixedSize(40, 40)
         self.btn_sync.setToolTip("Синхронизировать с Яндекс Трекером")
         self.btn_sync.clicked.connect(self.run_yandex_sync)
-        top_bar.addWidget(self.btn_sync)
+        self.right_toolbar_layout.addWidget(self.btn_sync)
 
+        # 4. Цикл создания системных кнопок (Правила, Настройки и т.д.)
         for icon, cmd in [
             ("🔄", self.open_rules),
             ("🕒", self.open_work_settings),
@@ -115,40 +175,22 @@ class VegCalendar(QMainWindow):
             btn.setObjectName("IconBtn")
             btn.setFixedSize(40, 40)
             btn.clicked.connect(cmd)
-            top_bar.addWidget(btn)
+            self.right_toolbar_layout.addWidget(btn)
 
+        # 5. Кнопка сворачивания панели статистики
         self.btn_collapse = QPushButton("▶")
         self.btn_collapse.setObjectName("IconBtn")
         self.btn_collapse.setFixedSize(40, 40)
         self.btn_collapse.clicked.connect(self.toggle_stats_panel)
-        top_bar.addWidget(self.btn_collapse)
+        self.right_toolbar_layout.addWidget(self.btn_collapse)
 
-        self.lbl_clock = QLabel()
-        top_bar.addWidget(self.lbl_clock)
-        self.main_layout.addLayout(top_bar)
 
-        nav = QHBoxLayout()
-        pb, nb = QPushButton("<"), QPushButton(">")
-        self.lbl_range = QLabel()
-        self.lbl_range.setFont(QFont("Arial", 11, QFont.Weight.Bold))
-        pb.clicked.connect(self.prev_w)
-        nb.clicked.connect(self.next_w)
-        nav.addStretch()
-        nav.addWidget(pb)
-        nav.addWidget(self.lbl_range)
-        nav.addWidget(nb)
-        nav.addStretch()
-        self.main_layout.addLayout(nav)
-
+        # --- СПЛИТТЕР И ТАБЛИЦЫ ---
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
-
         self.stack = QStackedWidget()
-
         self.table = QTableWidget(48, 8)
         self.table.verticalHeader().setVisible(False)
-        self.table.horizontalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.Stretch
-        )
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setMouseTracking(True)
         self.table.cellPressed.connect(self.on_cell_event)
         self.table.cellEntered.connect(self.on_cell_event)
@@ -156,67 +198,46 @@ class VegCalendar(QMainWindow):
         self.table.customContextMenuRequested.connect(self.show_context_menu)
         self.stack.addWidget(self.table)
 
-        # Создаем таблицу-отчет: 0 строк, 5 колонок
         self.mirror_table = QTableWidget(0, 5) 
-        
-        # УСТАНАВЛИВАЕМ ПРАВИЛЬНЫЕ ЗАГОЛОВКИ (Статус перед Комментарием)
-        self.mirror_table.setHorizontalHeaderLabels(
-            ["Дата", "Задача", "Время", "Статус", "Комментарий"]
-        )
-
+        self.mirror_table.setHorizontalHeaderLabels(["Дата", "Задача", "Время", "Статус", "Комментарий"])
         self.mirror_table.setWordWrap(True)
-        self.mirror_table.verticalHeader().setSectionResizeMode(
-            QHeaderView.ResizeMode.ResizeToContents
-        )
+        self.mirror_table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
 
         header = self.mirror_table.horizontalHeader()
-        header.sectionResized.connect(lambda logicalIndex, oldSize, newSize: self.save_to_disk())
+        header.sectionResized.connect(lambda: self.save_to_disk())
 
         saved = getattr(self.engine, 'mirror_widths', [140, 280, 100, 60, 500])
-        
         for i, width in enumerate(saved):
             if i < self.mirror_table.columnCount():
                 self.mirror_table.setColumnWidth(i, width)
 
-        # НАСТРОЙКА ПОВЕДЕНИЯ КОЛОНОК
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive) # Дата
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive) # Задача
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive) # Время
-        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)       # Статус (фиксированный)
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)     # Комментарий (тянется)
-
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
         header.setCascadingSectionResizes(True)
         header.setMinimumSectionSize(40)
-        header.sectionResized.connect(lambda logicalIndex, oldSize, newSize: self.save_to_disk())
-
-        # СОХРАНЯЕМ РАЗМЕРЫ КОЛОНОК
-        header.sectionResized.connect(self.save_to_disk)
-
+        
         self.mirror_table.setMinimumWidth(0)
         self.stack.setMinimumWidth(0)
-
-        # Делегат теперь для КОЛОНКИ 4 (Комментарий), чтобы текст переносился
-        self.mirror_table.setItemDelegateForColumn(
-            4, MultiLineDelegate(self.mirror_table)
-        )
-        
-        self.mirror_table.itemChanged.connect(
-            lambda: self.mirror_table.resizeRowsToContents()
-        )
+        self.mirror_table.setItemDelegateForColumn(4, MultiLineDelegate(self.mirror_table))
+        self.mirror_table.itemChanged.connect(lambda: self.mirror_table.resizeRowsToContents())
         self.mirror_table.cellDoubleClicked.connect(self.on_mirror_click)
+        
         self.stack.addWidget(self.mirror_table)
         self.splitter.addWidget(self.stack)
 
+        # --- ПАНЕЛЬ СТАТИСТИКИ (Детализация) ---
         self.stats_panel = QFrame()
         self.stats_panel.setObjectName("StatsPanel")
         stats_main_layout = QVBoxLayout(self.stats_panel)
         stats_main_layout.setContentsMargins(0, 0, 0, 0)
+        
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet("background: transparent;")
         scroll_content = QWidget()
-        scroll_content.setStyleSheet("background: transparent;")       
         self.stats_v = QVBoxLayout(scroll_content)
         self.stats_v.addWidget(QLabel("<b>📊 ДЕТАЛИЗАЦИЯ:</b>"))
         self.lbl_stats = QLabel()
@@ -227,15 +248,36 @@ class VegCalendar(QMainWindow):
         scroll.setWidget(scroll_content)
         stats_main_layout.addWidget(scroll)
 
-        self.table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Fixed
-        )
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
         self.table.setColumnWidth(0, 45)
 
         self.splitter.addWidget(self.stats_panel)
         self.splitter.setSizes([1000, 110])
 
-        self.main_layout.addWidget(self.splitter, 1)
+        # Создаем горизонтальный контейнер для "Сплиттер + Колонка кнопок"
+        content_layout = QHBoxLayout()
+        content_layout.addWidget(self.splitter, 1) # Сплиттер занимает всё место
+        
+        # --- ОБНОВЛЕННАЯ ПАНЕЛЬ КНОПОК ---
+        toolbar_widget = QWidget()
+        toolbar_widget.setObjectName("ToolbarWidget") # Для привязки стилей из конфига
+        toolbar_widget.setLayout(self.right_toolbar_layout)
+        
+        # Увеличиваем ширину столбца до 56px, чтобы влезли кнопки 44x44 + отступы
+        toolbar_widget.setFixedWidth(56) 
+        
+        # Назначаем кнопкам общий класс и размер
+        for i in range(self.right_toolbar_layout.count()):
+            item = self.right_toolbar_layout.itemAt(i)
+            widget = item.widget()
+            if isinstance(widget, QPushButton):
+                widget.setFixedSize(44, 44) # Квадратные и крупные
+                widget.setProperty("class", "SideBtn") # Чтобы работал стиль из конфига
+        
+        content_layout.addWidget(toolbar_widget)
+
+        # Добавляем этот общий горизонтальный слой в главный вертикальный слой окна
+        self.main_layout.addLayout(content_layout, 1)
 
         self.refresh_task_buttons()
         self.setup_view()
@@ -683,26 +725,6 @@ class VegCalendar(QMainWindow):
         WorkSettingsDialog(self).exec()
         self.setup_view()
         self.scroll_to_work()
-
-    def save_to_disk(self):
-
-        m_widths = []
-        if hasattr(self, "mirror_table"):
-            m_widths = [self.mirror_table.columnWidth(i) for i in range(5)]
-
-        with open(SAVE_FILE, "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "tasks": self.tasks_data,
-                    "history": self.history,
-                    "work": self.work_settings,
-                    "rules": self.rules_data,
-                    "mirror_widths": m_widths,
-                },
-                f,
-                indent=4,
-            )
-        self.sync_to_csv()
 
     def load_from_disk(self):
         if os.path.exists(SAVE_FILE):

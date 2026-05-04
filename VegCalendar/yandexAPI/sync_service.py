@@ -1,12 +1,13 @@
 import csv
 import logging
+import config
 from datetime import datetime
 from .connector import YandexTrackerAPI
 from .time_parser import iso_duration_to_minutes, normalize_to_date_str
 
 # Настройка логирования
 logging.basicConfig(
-    filename='sync_log.txt',
+    filename=config.LOG_FILE,
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     encoding='utf-8'
